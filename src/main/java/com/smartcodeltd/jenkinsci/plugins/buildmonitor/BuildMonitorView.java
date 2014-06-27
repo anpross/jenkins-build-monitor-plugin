@@ -25,6 +25,7 @@ package com.smartcodeltd.jenkinsci.plugins.buildmonitor;
 
 import com.smartcodeltd.jenkinsci.plugins.buildmonitor.order.ByName;
 import com.smartcodeltd.jenkinsci.plugins.buildmonitor.viewmodel.JobView;
+import com.smartcodeltd.jenkinsci.plugins.buildmonitor.viewmodel.ParameterizedComparator;
 import com.smartcodeltd.jenkinsci.plugins.buildmonitor.viewmodel.plugins.BuildAugmentor;
 import com.smartcodeltd.jenkinsci.plugins.buildmonitor.viewmodel.plugins.claim.Claim;
 import hudson.Extension;
@@ -99,9 +100,10 @@ public class BuildMonitorView extends ListView {
         super.submit(req);
 
         String requestedOrdering = req.getParameter("order");
+        String orderingParameter = req.getParameter("orderingParameter");
 
         try {
-            order = orderIn(requestedOrdering);
+            order = orderIn(requestedOrdering, orderingParameter);
         } catch (Exception e) {
             throw new FormException("Can't order projects by " + requestedOrdering, "order");
         }
@@ -119,11 +121,34 @@ public class BuildMonitorView extends ListView {
 
     private Comparator<AbstractProject> order = new ByName();
 
+    /**
+     * getter for the ordering parameter. this parameter is only available if the
+     * Comparator supports it (implements ParameterizedComparator).
+     *
+     * @return the ordering parameter if applicable
+     */
+    public String orderingParameter() {
+        String param = new String();
+        Comparator<AbstractProject> order = currentOrderOrDefault();
+        if(order instanceof ParameterizedComparator) {
+            ParameterizedComparator paramOrder = (ParameterizedComparator) order;
+            if(paramOrder.getParameter() != null) {
+                param = paramOrder.getParameter();
+            }
+        }
+        return param;
+    }
+
     @SuppressWarnings("unchecked")
-    private Comparator<AbstractProject> orderIn(String requestedOrdering) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+    private Comparator<AbstractProject> orderIn(String requestedOrdering, String orderParameters) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
         String packageName = this.getClass().getPackage().getName() + ".order.";
 
-        return (Comparator<AbstractProject>) Class.forName(packageName + requestedOrdering).newInstance();
+        Comparator<AbstractProject> comparator = (Comparator<AbstractProject>) Class.forName(packageName + requestedOrdering).newInstance();
+        if (comparator instanceof ParameterizedComparator) {
+            ParameterizedComparator paramComp = (ParameterizedComparator) comparator;
+            paramComp.setParameter(orderParameters);
+        }
+        return comparator;
     }
 
     /**

@@ -43,12 +43,54 @@
   <!-- END cut'n'paste from https://github.com/jenkinsci/jenkins/blob/jenkins-1.480/core/src/main/resources/hudson/model/ListView/configure-entries.jelly -->
 
   <f:section title="${%Build Monitor Settings}">
+    <script type="text/javascript"><![CDATA[
+      function addLoadEvent(func) {
+        var oldonload = window.onload;
+        if (typeof window.onload != 'function') {
+          window.onload = func;
+        } else {
+          window.onload = function() {
+            if (oldonload) {
+              oldonload();
+            }
+            func();
+          }
+        }
+      }
 
+      <!-- check if everything we need is here - should work with IE9 and up, older browsers will always see the parameter -->
+      if (Array.prototype.indexOf && Array.prototype.indexOf) {
+        addLoadEvent(function(){
+          var comparatorsWithParameters = ['ByParameterList'];
+          var orderDropdown = document.getElementsBySelector('select[name="order"]')[0];
+          var parameterRow = document.getElementsBySelector('input[name="orderingParameter"]')[0].parentElement.parentElement;
+
+          var updateParameterVisibility = function(e) {
+            var dropdownValue = e.srcElement ? e.srcElement.value : e.value;
+            <!-- indexOf does not work in IE < 9 -->
+            if(comparatorsWithParameters.indexOf(dropdownValue) >= 0) {
+              parameterRow.style.display = '';
+            } else {
+              parameterRow.style.display = 'none';
+            }
+          };
+
+          updateParameterVisibility(orderDropdown);
+
+          <!-- addEventListener does not work in IE < 9 -->
+          orderDropdown.addEventListener('change', updateParameterVisibility);
+        });
+      }]]>
+    </script>
   <f:entry title="${%Ordered by}">
     <select name="order" class="setting-input">
       <f:option value="ByName" selected='${it.currentOrder()=="ByName"}'>${%Name}</f:option>
-      <f:option value="ByDisplayName" selected="${it.currentOrder()=='ByDisplayName'}">${%Display name}</f:option>
+        <f:option value="ByDisplayName" selected="${it.currentOrder()=='ByDisplayName'}">${%Display name}</f:option>
+        <f:option value="ByParameterList" selected="${it.currentOrder()=='ByParameterList'}">${%parameter order}</f:option>
     </select>
+  </f:entry>
+  <f:entry title="${%custom parameter}">
+      <f:textbox name="orderingParameter" field="orderingParameter" type="text" value="${it.orderingParameter()}"></f:textbox>
   </f:entry>
 
   </f:section>
